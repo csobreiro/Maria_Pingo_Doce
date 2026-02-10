@@ -4,7 +4,7 @@ import pandas as pd
 
 # 1. Configuração da Página
 st.set_page_config(
-    page_title="Maria - Livro de Receitas", 
+    page_title="A Maria do Pingo Doce - Livro de Receitas ", 
     page_icon="🍳",
     layout="centered"
 )
@@ -19,7 +19,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("🍳 Maria - O seu Livro de Receitas")
-st.markdown("##### Escolha o seu vinho e eu preparo a receita detalhada para o seu jantar.")
+st.markdown("##### Escolha o seu vinho e eu preparo a receita detalhada para o seu almoço ou jantar.")
 
 # 2. Configuração da API Key
 api_key = st.secrets.get("GEMINI_API_KEY", "").strip()
