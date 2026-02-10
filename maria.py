@@ -12,88 +12,119 @@ st.markdown("""
 
 st.title("🌿 Maria - Especialista em Vinhos")
 
+# Validação da API Key
 api_key = st.secrets.get("GEMINI_API_KEY", "").strip()
 
 if not api_key:
     st.error("⚠️ Configure a GEMINI_API_KEY nos Secrets do Streamlit.")
+    st.info("👉 Obtenha em: https://aistudio.google.com/apikey")
     st.stop()
 
-try:
-    genai.configure(api_key=api_key)
-    
-    # Botão debug para ver modelos disponíveis
-    if st.sidebar.checkbox("🔍 Mostrar modelos disponíveis (debug)"):
-        with st.sidebar:
-            st.write("**Modelos disponíveis na sua conta:**")
-            try:
-                for m in genai.list_models():
-                    if 'generateContent' in m.supported_generation_methods:
-                        st.code(m.name)
-            except Exception as e:
-                st.error(f"Erro ao listar: {e}")
-    
-    # Tenta usar o modelo mais comum primeiro
-    model = None
-    
-    # Ordem de preferência
-    modelos_tentar = [
-        'gemini-1.5-flash-latest',
-        'gemini-1.5-pro-latest', 
-        'gemini-pro'
-    ]
-    
-    for modelo_nome in modelos_tentar:
+# Configuração
+genai.configure(api_key=api_key)
+
+# Botão para debug
+if st.sidebar.button("🔍 Ver modelos disponíveis"):
+    with st.sidebar:
         try:
-            model = genai.GenerativeModel(modelo_nome)
-            # Teste simples
-            _ = model.generate_content("teste")
-            st.sidebar.success(f"✅ A usar: {modelo_nome}")
-            break
+            st.write("**Modelos com generateContent:**")
+            modelos_encontrados = []
+            for m in genai.list_models():
+                if 'generateContent' in m.supported_generation_methods:
+                    modelos_encontrados.append(m.name)
+                    st.success(f"✅ {m.name}")
+            
+            if not modelos_encontrados:
+                st.error("❌ Nenhum modelo encontrado!")
+                st.warning("Possíveis causas:")
+                st.markdown("""
+                - API key inválida
+                - Região bloqueada
+                - Conta sem acesso ao Gemini
+                """)
         except Exception as e:
-            st.sidebar.warning(f"❌ {modelo_nome}: {str(e)[:50]}")
-            continue
-    
-    if not model:
-        st.error("❌ Nenhum modelo disponível. Verifique:")
-        st.markdown("""
-        1. A sua **API key** está correta?
-        2. A API Gemini está **ativa** no Google AI Studio?
-        3. Tem **quota disponível**?
-        
-        👉 Aceda a: https://aistudio.google.com/apikey
-        """)
-        st.stop()
+            st.error(f"Erro: {e}")
 
-except Exception as e:
-    st.error(f"❌ Erro de configuração: {e}")
-    st.stop()
-
-# Interface principal
+# Input do utilizador
 vinho = st.text_input(
     "Qual é o vinho?", 
-    placeholder="Ex: Papa Figos, Esporão, Mateus...",
+    placeholder="Ex: Papa Figos, Esporão, Periquita...",
     max_chars=100
 )
 
 if vinho and vinho.strip():
-    with st.spinner('🍇 A Maria está a pensar...'):
-        prompt = f"""És a Maria, sommelier portuguesa.
+    vinho_limpo = vinho.strip()
+    
+    with st.spinner('🍇 A Maria está a trabalhar...'):
+        prompt = f"""És a Maria, sommelier portuguesa experiente.
 
-Vinho: {vinho.strip()}
+Vinho do utilizador: {vinho_limpo}
 
-Sugere:
-- Uma receita portuguesa
-- Porquê harmoniza bem
+Tarefa:
+1. Identifica o tipo de vinho
+2. Sugere UMA receita portuguesa que harmonize bem
+3. Explica brevemente porquê (em 2-3 linhas)
 
-Responde em PT-PT, de forma breve e simpática."""
+Responde em português de Portugal, tom amigável."""
 
         try:
-            response = model.generate_content(prompt)
+            # IMPORTANTE: Usar o nome COMPLETO do modelo
+            model = genai.GenerativeModel('gemini-1.5-flash')
             
-            st.markdown("---")
-            st.markdown("### 🍽️ Sugestão da Maria")
-            st.markdown(response.text)
-            st.balloons()
+            response = model.generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.7,
+                    max_output_tokens=500,
+                )
+            )
             
+            if response.text:
+                st.markdown("---")
+                st.markdown("### 🍽️ Sugestão da Maria")
+                st.markdown(response.text)
+                st.balloons()
+            else:
+                st.warning("A resposta veio vazia. Tente novamente.")
+                
         except Exception as e:
-            st.error(f"❌ Erro: {e}")
+            erro_texto = str(e)
+            
+            # Se for erro 404, tenta outros modelos
+            if "404" in erro_texto:
+                st.error("❌ Modelo não encontrado. A tentar alternativas...")
+                
+                modelos_fallback = [
+                    'gemini-1.5-pro',
+                    'gemini-1.5-flash-latest',
+                    'gemini-pro',
+                ]
+                
+                sucesso = False
+                for modelo_alt in modelos_fallback:
+                    try:
+                        st.info(f"Tentando {modelo_alt}...")
+                        model_alt = genai.GenerativeModel(modelo_alt)
+                        response = model_alt.generate_content(prompt)
+                        
+                        if response.text:
+                            st.markdown("---")
+                            st.markdown("### 🍽️ Sugestão da Maria")
+                            st.markdown(response.text)
+                            st.caption(f"*Modelo usado: {modelo_alt}*")
+                            sucesso = True
+                            break
+                    except Exception:
+                        continue
+                
+                if not sucesso:
+                    st.error("❌ Nenhum modelo funcionou.")
+                    st.markdown("""
+                    ### 🔧 Soluções:
+                    1. Verifique se a API key está correta
+                    2. Clique em **"Ver modelos disponíveis"** na barra lateral
+                    3. Acesse: https://aistudio.google.com/apikey
+                    4. Crie uma nova API key se necessário
+                    """)
+            else:
+                st.error(f"❌ Erro: {erro_texto}")
