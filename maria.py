@@ -1,15 +1,14 @@
 import streamlit as st
 import google.generativeai as genai
-import pandas as pd
 
-# 1. Configuração da Página e Adaptação de Cor (Mobile Friendly)
+# 1. Configuração da Página e Adaptação de Cor para Mobile
 st.set_page_config(
     page_title="A Maria do Pingo Doce", 
     page_icon="🍳",
     layout="centered"
 )
 
-# Estilo Adaptativo: Evita o clarão branco à noite e organiza os blocos
+# Estilo Adaptativo (Light/Dark Mode)
 st.markdown("""
     <meta name="color-scheme" content="light dark">
     <style>
@@ -22,94 +21,76 @@ st.markdown("""
         background-color: rgba(128, 128, 128, 0.1);
         margin-bottom: 25px;
     }
-    /* Garante que o texto da receita não pareça código */
-    .recipe-text {
-        white-space: pre-wrap;
-        line-height: 1.6;
-    }
     </style>
 """, unsafe_allow_html=True)
 
 st.title("🍳 A Maria do Pingo Doce")
+st.markdown("##### O seu guia de vinhos e receitas inteligente.")
 
-# 2. Configuração da API Key
+# 2. Configuração da API Key (Streamlit Secrets)
 api_key = st.secrets.get("GEMINI_API_KEY", "").strip()
-if api_key:
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('models/gemini-2.5-flash')
 
-# 3. Carregamento da Tabela
-@st.cache_data
-def load_data():
-    try:
-        df = pd.read_csv("Tabela Vinho.xlsx - Sheet1.csv")
-        df.columns = df.columns.str.strip()
-        return df
-    except:
-        return None
+if not api_key:
+    st.error("⚠️ Configure a GEMINI_API_KEY nos Secrets do Streamlit.")
+    st.stop()
 
-df_vinhos = load_data()
+genai.configure(api_key=api_key)
+model = genai.GenerativeModel('models/gemini-2.5-flash')
 
-# 4. Interface de Utilizador
-vinho_input = st.text_input("Que vinho tem para hoje?", placeholder="Ex: Papa Figos, Bosque Premium...")
+# 3. Interface de Utilizador
+vinho_input = st.text_input(
+    "Que vinho escolheu para hoje?", 
+    placeholder="Ex: Papa Figos, Muralhas de Monção, Esporão...",
+    max_chars=100
+)
 
 if vinho_input and vinho_input.strip():
-    resultado_interno = None
     
-    # Busca na tabela (mais flexível)
-    if df_vinhos is not None:
-        busca = df_vinhos[df_vinhos['Nome do Vinho'].str.contains(vinho_input, case=False, na=False)]
-        if not busca.empty:
-            resultado_interno = busca.iloc[0]
-
-    # --- MOMENTO 1: INFORMAÇÃO IMEDIATA ---
+    # --- MOMENTO 1: O SOMMELIER (Informação Online Imediata) ---
     st.markdown("### 🍷 Momento 1: A Garrafeira")
     
-    if resultado_interno is not None:
-        nome_v = resultado_interno['Nome do Vinho']
-        produtor_v = resultado_interno['Região / Produtor']
-        prato_v = resultado_interno['Receita Pingo Doce Sugerida']
+    with st.spinner('A Maria está a consultar a cave...'):
+        prompt_vinho = f"""
+        És a Maria, sommelier portuguesa. O utilizador tem o vinho: {vinho_input}.
+        Diz-me de forma muito curta:
+        1. Quem é o Produtor e qual a Região.
+        2. Qual o perfil do vinho (breve).
+        3. Qual a harmonização ideal (apenas o nome do prato).
         
-        st.markdown(f"""
-        <div class="vinho-box">
-            <strong>🍷 Vinho:</strong> {nome_v}<br>
-            <strong>🏷️ Produtor / Região:</strong> {produtor_v}<br>
-            <strong>🤝 Harmonização:</strong> Perfeito para acompanhar <strong>{prato_v}</strong>.
-        </div>
-        """, unsafe_allow_html=True)
-        
-        contexto_ia = f"Vinho: {nome_v} ({produtor_v}). Receita: {prato_v}."
-        nome_receita = prato_v
-    else:
-        st.info("A analisar o perfil deste vinho...")
-        contexto_ia = vinho_input
-        nome_receita = f"uma receita para {vinho_input}"
-
-    # --- MOMENTO 2: GERAÇÃO DA RECEITA (SEM MOSTRAR CÓDIGO) ---
-    st.markdown("---")
-    
-    # Criamos um container para a receita aparecer de forma organizada
-    with st.spinner('A Maria está a escrever a receita detalhada...'):
-        prompt = f"""
-        És a Maria, cozinheira portuguesa. O utilizador já viu o produtor e a harmonização.
-        Apresenta a receita completa e detalhada para: {nome_receita}.
-        Vinho: {contexto_ia}.
-
-        Estrutura a resposta em Markdown limpo:
-        # **Título da Receita**
-        ### 🛒 **Ingredientes** (2-4 pessoas)
-        ### 👨‍🍳 **Modo de Preparação** (Passo-a-passo)
-        ### 💡 **Dica da Maria**
-
-        Usa PT-PT. Não uses blocos de código (```).
+        Responde em Português de Portugal com este formato exato:
+        **Produtor/Região:** [Resposta]
+        **Perfil:** [Resposta]
+        **Harmonização Ideal:** [Nome do Prato]
         """
-
+        
         try:
-            # Substituímos o write_stream por markdown direto para evitar o aspeto de código
-            response = model.generate_content(prompt)
-            st.markdown(response.text)
+            res_vinho = model.generate_content(prompt_vinho)
+            texto_vinho = res_vinho.text
+            
+            # Exibe o quadro informativo
+            st.markdown(f'<div class="vinho-box">{texto_vinho}</div>', unsafe_allow_html=True)
+            
+            # --- MOMENTO 2: A RECEITA DETALHADA ---
+            st.markdown("---")
+            with st.spinner('A preparar o livro de receitas para esse prato...'):
+                # Extraímos o prato da resposta anterior para a receita ser coerente
+                prompt_receita = f"""
+                Com base na harmonização que sugeriste para o vinho {vinho_input}, 
+                apresenta agora a receita detalhada.
+                
+                Estrutura:
+                # **Título da Receita**
+                ### 🛒 **Ingredientes** (2-4 pessoas)
+                ### 👨‍🍳 **Modo de Preparação** (Passo-a-passo)
+                ### 💡 **Dica da Maria**
+                
+                Usa PT-PT. Responde apenas com a receita.
+                """
+                response = model.generate_content(prompt_receita)
+                st.markdown(response.text)
+                
         except Exception as e:
-            st.error(f"Erro ao gerar a receita: {e}")
+            st.error(f"A Maria teve um pequeno problema: {e}")
 
 st.markdown("---")
-st.caption("Maria - Sommelier & Chef | Versão 2.5 Flash | 2026")
+st.caption("Maria - Inteligência Artificial em Tempo Real | 2026")
