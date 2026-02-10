@@ -19,7 +19,7 @@ st.markdown("""
         border-left: 6px solid var(--pingo-green);
         background-color: rgba(128, 128, 128, 0.1);
         margin-bottom: 25px;
-        line-height: 1.8; /* Aumenta o espaço entre linhas para ler melhor */
+        line-height: 1.8;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -33,7 +33,7 @@ if not api_key:
     st.stop()
 
 genai.configure(api_key=api_key)
-model = genai.GenerativeModel('models/gemini-2.5-flash')
+model = genai.GenerativeModel('models/gemini-2.0-flash') # Atualizado para a versão mais estável
 
 # 3. Interface de Utilizador
 vinho_input = st.text_input(
@@ -44,54 +44,55 @@ vinho_input = st.text_input(
 
 if vinho_input and vinho_input.strip():
     
-    with st.spinner('A Maria está a organizar a garrafeira e a cozinha...'):
+    with st.spinner('A Maria está a preparar a garrafeira e a cozinha...'):
         
-        # PROMPT ÚNICO: Organiza o Momento 1 em linhas separadas e garante a coerência
+        # PROMPT REFORÇADO: Instruções diretas para evitar falhas na receita
         prompt_unico = f"""
         És a Maria, especialista em vinhos e cozinheira portuguesa.
         O utilizador tem o vinho: {vinho_input}.
         
-        Responde seguindo rigorosamente esta estrutura dividida por "---":
+        Gera uma resposta com duas secções claras separadas por "SEPARADOR_MARIA".
         
-        MOMENTO1
-        🍷 **Vinho:** [Nome do Vinho]
-        🏷️ **Produtor/Região:** [Nome do Produtor e Região]
-        📝 **Perfil:** [Breve descrição do vinho]
-        🤝 **Harmonização Ideal:** [Nome do Prato Específico]
-        ---
-        MOMENTO2
-        # **[Nome do Prato Específico]**
+        Na primeira secção (Vinho):
+        🍷 **Vinho:** [Nome]
+        🏷️ **Produtor/Região:** [Nome]
+        📝 **Perfil:** [Breve descrição]
+        🌡️ **Servir a:** [Temperatura ideal]
+        🤝 **Harmonização Ideal:** [Nome do Prato]
+
+        Na segunda secção (Receita):
+        # **[Nome do Prato]**
         ### 🛒 **Ingredientes** (2-4 pessoas)
-        ### 👨‍🍳 **Modo de Preparação** (Passo-a-passo)
+        ### 👨‍🍳 **Modo de Preparação**
         ### 💡 **Dica da Maria**
         
         Regras: 
-        - No MOMENTO1, coloca cada item obrigatoriamente numa linha nova.
-        - O prato no MOMENTO1 tem de ser rigorosamente o MESMO da receita no MOMENTO2.
+        - O prato da harmonização tem de ser o mesmo da receita.
         - Usa Português de Portugal.
+        - Escreve "SEPARADOR_MARIA" entre as duas secções.
         """
         
         try:
             response = model.generate_content(prompt_unico)
-            partes = response.text.split("---")
+            conteudo = response.text
             
-            if len(partes) >= 2:
-                # --- MOMENTO 1: O SOMMELIER (Organizado por linhas) ---
-                st.markdown("### 🍷 Momento 1: A Garrafeira")
-                info_vinho = partes[0].replace("MOMENTO1", "").strip()
-                st.markdown(f'<div class="vinho-box">{info_vinho}</div>', unsafe_allow_html=True)
+            if "SEPARADOR_MARIA" in conteudo:
+                partes = conteudo.split("SEPARADOR_MARIA")
                 
-                # --- MOMENTO 2: A RECEITA ---
+                # --- MOMENTO 1 ---
+                st.markdown("### 🍷 Momento 1: A Garrafeira")
+                st.markdown(f'<div class="vinho-box">{partes[0].strip()}</div>', unsafe_allow_html=True)
+                
+                # --- MOMENTO 2 ---
                 st.markdown("---")
                 st.markdown("### 👨‍🍳 Momento 2: A Cozinha")
-                receita_detalhada = partes[1].replace("MOMENTO2", "").strip()
-                st.markdown(receita_detalhada)
+                st.markdown(partes[1].strip())
             else:
-                # Fallback caso a IA não use o separador
-                st.markdown(response.text)
+                # Se a IA falhar o separador, mostra tudo para não deixar o utilizador sem nada
+                st.markdown(conteudo)
                 
         except Exception as e:
-            st.error(f"Erro na Maria: {e}")
+            st.error(f"Erro ao contactar a Maria: {e}")
 
 st.markdown("---")
-st.caption("Maria - Harmonização Garantida 2.5 Flash | 2026")
+st.caption("Maria - Sommelier & Chef | Versão 2026")
