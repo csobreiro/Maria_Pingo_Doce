@@ -45,7 +45,7 @@ vinho_input = st.text_input(
 if vinho_input and vinho_input.strip():
     
     # Criamos um estado para não repetir a chamada à IA sem necessidade
-    with st.spinner('A Maria está a preparar tudo para si...'):
+    with st.spinner('A Maria está a preparar tudo para si...o vinho e a cozinha'):
         
         # PROMPT ÚNICO: Garante que a harmonização e a receita são a mesma coisa
         prompt_unico = f"""
@@ -54,12 +54,14 @@ if vinho_input and vinho_input.strip():
         
         Responde seguindo rigorosamente esta estrutura dividida por "---":
         
-        MOMENTO1
-        **Produtor/Região:** [Nome do Produtor e Região]
-        **Perfil:** [Breve descrição do vinho]
-        **Harmonização Ideal:** [Nome do Prato Específico]
+        Sobre o Vinho
+        🍷 **Vinho:** [Nome] <br>
+        🏷️ **Produtor/Região:** [Nome] <br>
+        📝 **Perfil:** [Breve descrição] <br>
+        🌡️ **Servir a:** [Temperatura] <br>
+        🤝 **Harmonização Ideal:** [Nome do Prato] <br>
         ---
-        MOMENTO2
+        A melhor receita para este vinho
         # **[Nome do Prato Específico]**
         ### 🛒 **Ingredientes** (2-4 pessoas)
         ### 👨‍🍳 **Modo de Preparação** (Passo-a-passo)
