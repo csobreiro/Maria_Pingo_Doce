@@ -97,13 +97,13 @@ if vinho_input and vinho_input.strip():
         
         if len(partes) >= 2:
             # --- MOMENTO 1: O SOMMELIER ---
-            st.markdown("### 🍷 Sobre o vinho: A Garrafeira")
+            st.markdown("### 🍷 Sobre o vinho: ")
             info_vinho = partes[0].replace("MOMENTO1", "").strip()
             st.markdown(f'<div class="vinho-box">{info_vinho}</div>', unsafe_allow_html=True)
             
             # --- MOMENTO 2: A RECEITA ---
             st.markdown("---")
-            st.markdown("### 👨‍🍳  A melhor receita para este vinho: A Cozinha")
+            st.markdown("### 👨‍🍳  A melhor receita para este vinho: ")
             receita_detalhada = partes[1].replace("MOMENTO2", "").strip()
             st.markdown(receita_detalhada)
         else:
