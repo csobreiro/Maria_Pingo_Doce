@@ -110,4 +110,4 @@ if vinho_input and vinho_input.strip():
             st.markdown(partes[0] if partes else "Resposta inválida")
 
 st.markdown("---")
-st.caption("Maria - Harmonização Garantida 1.5 Flash | 2026")
+st.caption("Maria do Pingo Doce | Carlos Sobreiro 2026")
