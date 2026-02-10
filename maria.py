@@ -4,7 +4,7 @@ import google.generativeai as genai
 # 1. Configuração da Página e Estilo Adaptativo
 st.set_page_config(
     page_title="A Maria do Pingo Doce", 
-    page_icon="🍳",
+    page_icon="🍷",
     layout="centered"
 )
 
@@ -19,7 +19,7 @@ st.markdown("""
         border-left: 6px solid var(--pingo-green);
         background-color: rgba(128, 128, 128, 0.1);
         margin-bottom: 25px;
-        line-height: 1.6;
+        line-height: 1.8; /* Aumenta o espaço entre linhas para ler melhor */
     }
     </style>
 """, unsafe_allow_html=True)
@@ -35,7 +35,7 @@ if not api_key:
 genai.configure(api_key=api_key)
 model = genai.GenerativeModel('models/gemini-2.5-flash')
 
-# 3. Interface
+# 3. Interface de Utilizador
 vinho_input = st.text_input(
     "Que vinho escolheu para hoje?", 
     placeholder="Ex: Papa Figos, Muralhas, Esporão...",
@@ -44,10 +44,9 @@ vinho_input = st.text_input(
 
 if vinho_input and vinho_input.strip():
     
-    # Criamos um estado para não repetir a chamada à IA sem necessidade
-    with st.spinner('A Maria está a preparar tudo para si...'):
+    with st.spinner('A Maria está a organizar a garrafeira e a cozinha...'):
         
-        # PROMPT ÚNICO: Garante que a harmonização e a receita são a mesma coisa
+        # PROMPT ÚNICO: Organiza o Momento 1 em linhas separadas e garante a coerência
         prompt_unico = f"""
         És a Maria, especialista em vinhos e cozinheira portuguesa.
         O utilizador tem o vinho: {vinho_input}.
@@ -55,9 +54,10 @@ if vinho_input and vinho_input.strip():
         Responde seguindo rigorosamente esta estrutura dividida por "---":
         
         MOMENTO1
-        **Produtor/Região:** [Nome do Produtor e Região]
-        **Perfil:** [Breve descrição do vinho]
-        **Harmonização Ideal:** [Nome do Prato Específico]
+        🍷 **Vinho:** [Nome do Vinho]
+        🏷️ **Produtor/Região:** [Nome do Produtor e Região]
+        📝 **Perfil:** [Breve descrição do vinho]
+        🤝 **Harmonização Ideal:** [Nome do Prato Específico]
         ---
         MOMENTO2
         # **[Nome do Prato Específico]**
@@ -66,7 +66,8 @@ if vinho_input and vinho_input.strip():
         ### 💡 **Dica da Maria**
         
         Regras: 
-        - O prato no MOMENTO1 tem de ser o MESMO da receita no MOMENTO2.
+        - No MOMENTO1, coloca cada item obrigatoriamente numa linha nova.
+        - O prato no MOMENTO1 tem de ser rigorosamente o MESMO da receita no MOMENTO2.
         - Usa Português de Portugal.
         """
         
@@ -75,7 +76,7 @@ if vinho_input and vinho_input.strip():
             partes = response.text.split("---")
             
             if len(partes) >= 2:
-                # --- MOMENTO 1: O SOMMELIER ---
+                # --- MOMENTO 1: O SOMMELIER (Organizado por linhas) ---
                 st.markdown("### 🍷 Momento 1: A Garrafeira")
                 info_vinho = partes[0].replace("MOMENTO1", "").strip()
                 st.markdown(f'<div class="vinho-box">{info_vinho}</div>', unsafe_allow_html=True)
@@ -86,6 +87,7 @@ if vinho_input and vinho_input.strip():
                 receita_detalhada = partes[1].replace("MOMENTO2", "").strip()
                 st.markdown(receita_detalhada)
             else:
+                # Fallback caso a IA não use o separador
                 st.markdown(response.text)
                 
         except Exception as e:
