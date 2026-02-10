@@ -4,28 +4,29 @@ import pandas as pd
 
 # 1. Configuração da Página
 st.set_page_config(
-    page_title="A Maria do Pingo Doce - Receitas & Vinhos", 
+    page_title="Maria - Livro de Receitas", 
     page_icon="🍳",
     layout="centered"
 )
 
-# Estilo Visual focado em Culinária
+# Estilo Visual
 st.markdown("""
     <style>
     .stApp {background-color: #fdfdfd;}
     h1 {color: #2e7d32;}
-    .recipe-card {
-        background-color: #ffffff;
-        padding: 20px;
-        border-radius: 15px;
+    .stTextInput > div > div > input {border-radius: 10px; border: 2px solid #2e7d32;}
+    .vinho-info {
+        background-color: #e8f5e9;
+        padding: 15px;
+        border-radius: 10px;
         border-left: 5px solid #2e7d32;
-        box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+        margin-bottom: 20px;
     }
     </style>
 """, unsafe_allow_html=True)
 
 st.title("🍳 Maria - O seu Livro de Receitas")
-st.markdown("##### Escolha o seu vinho e eu preparo a receita detalhada para o seu jantar.")
+st.markdown("##### Escolha o seu vinho e eu preparo a receita detalhada.")
 
 # 2. Configuração da API Key
 api_key = st.secrets.get("GEMINI_API_KEY", "").strip()
@@ -35,7 +36,6 @@ if not api_key:
     st.stop()
 
 genai.configure(api_key=api_key)
-# Utilizando o modelo 2.5 conforme solicitado
 model = genai.GenerativeModel('models/gemini-2.5-flash')
 
 # 3. Carregamento da Tabela
@@ -44,7 +44,7 @@ def load_data():
     try:
         df = pd.read_csv("Tabela Vinho.xlsx - Sheet1.csv")
         return df
-    except Exception as e:
+    except Exception:
         return None
 
 df_vinhos = load_data()
@@ -57,49 +57,55 @@ vinho_input = st.text_input(
 )
 
 if vinho_input and vinho_input.strip():
-    with st.spinner('A Maria está a escolher a sua receita...'):
-        resultado_interno = None
-        
-        if df_vinhos is not None:
-            busca = df_vinhos[df_vinhos['Nome do Vinho'].str.contains(vinho_input, case=False, na=False)]
-            if not busca.empty:
-                resultado_interno = busca.iloc[0]
+    resultado_interno = None
+    
+    # Busca imediata na tabela
+    if df_vinhos is not None:
+        busca = df_vinhos[df_vinhos['Nome do Vinho'].str.contains(vinho_input, case=False, na=False)]
+        if not busca.empty:
+            resultado_interno = busca.iloc[0]
 
-        # Definir o nome do prato para a IA detalhar
+    # --- PASSO 1: Apresentar info do vinho IMEDIATAMENTE ---
+    st.markdown("### 🍷 Nota da Maria sobre o Vinho")
+    with st.container():
         if resultado_interno is not None:
+            st.markdown(f"""
+            <div class="vinho-info">
+                <strong>Vinho:</strong> {resultado_interno['Nome do Vinho']}<br>
+                <strong>Perfil:</strong> {resultado_interno['Descrição']}<br>
+                <strong>Região/Produtor:</strong> {resultado_interno['Região / Produtor']}<br>
+                <strong>Preço aprox.:</strong> {resultado_interno['Preço (aprox.)']}
+            </div>
+            """, unsafe_allow_html=True)
             nome_prato = resultado_interno['Receita Pingo Doce Sugerida']
-            detalhes_vinho = f"Vinho: {resultado_interno['Nome do Vinho']} ({resultado_interno['Região / Produtor']})"
+            info_vinho_prompt = f"{resultado_interno['Nome do Vinho']} ({resultado_interno['Região / Produtor']})"
         else:
-            nome_prato = f"um prato ideal para acompanhar {vinho_input}"
-            detalhes_vinho = f"Vinho: {vinho_input}"
+            st.info(f"Vou procurar a melhor harmonização para o seu **{vinho_input}**...")
+            nome_prato = f"um prato típico que combine com {vinho_input}"
+            info_vinho_prompt = vinho_input
 
-        # Prompt focado 100% na Receita Detalhada
+    # --- PASSO 2: Pensar e apresentar a Receita ---
+    with st.spinner('A escrever a receita detalhada para si...'):
         prompt_receita = f"""
-        És a Maria, uma cozinheira portuguesa experiente. 
-        O utilizador vai beber: {detalhes_vinho}.
-        A tua tarefa é apresentar a receita detalhada para o prato: {nome_prato}.
+        És a Maria, cozinheira portuguesa. O utilizador tem este vinho: {info_vinho_prompt}.
+        Apresenta a receita detalhada para: {nome_prato}.
 
-        Estrutura a tua resposta assim:
-        1. **Título da Receita** (em destaque).
-        2. **Ingredientes**: Lista detalhada com quantidades para 2-4 pessoas.
-        3. **Modo de Preparação**: Passo-a-passo claro e numerado.
-        4. **Dica da Maria**: Um segredo de cozinha para o prato ficar perfeito.
-        5. **Harmonização**: Uma frase curta (máximo 15 palavras) sobre o porquê de combinar com o vinho.
-        5. **Produtor**: Uma frase curta (máximo 15 palavras) sobre o produtor do vinho.
+        Estrutura:
+        1. # **Título da Receita**
+        2. ### 🛒 **Ingredientes** (Para 2-4 pessoas)
+        3. ### 👨‍🍳 **Modo de Preparação** (Passo-a-passo)
+        4. ### 💡 **Dica da Maria** (Segredo de chef)
+        5. ### 🍷 **Harmonização** (Curta explicação técnica)
+        6. ### 🏷️ **Sobre o Produtor** (Curiosidade curta)
 
-        Usa Português de Portugal. Foca-te na culinária, não te alongues sobre o vinho.
+        Usa Português de Portugal. Foca na receita.
         """
 
         try:
             response = model.generate_content(prompt_receita)
-            
-            # Apresentação do Resultado
-            if resultado_interno is not None:
-                st.success(f"🍷 Combinação encontrada: {resultado_interno['Nome do Vinho']}")
-            
             st.markdown("---")
             st.markdown(response.text)
-            st.balloons()
+            # Sem balões aqui
             
         except Exception as e:
             st.error(f"Erro ao gerar a receita: {e}")
