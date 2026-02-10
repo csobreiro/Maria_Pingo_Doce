@@ -33,7 +33,7 @@ if not api_key:
     st.stop()
 
 genai.configure(api_key=api_key)
-model = genai.GenerativeModel('models/gemini-1.5-flash')
+model = genai.GenerativeModel('models/gemini-2.0-flash')
 
 # 3. Interface
 vinho_input = st.text_input(
