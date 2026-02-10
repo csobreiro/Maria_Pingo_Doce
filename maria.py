@@ -34,7 +34,7 @@ if not api_key:
 
 try:
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('models/gemini-2.5-flash')
+    model = genai.GenerativeModel('models/gemini-flash-latest')
 except Exception as e:
     st.error(f"Erro ao configurar modelo: {e}")
     st.info("Tente: pip install --upgrade google-generativeai")
