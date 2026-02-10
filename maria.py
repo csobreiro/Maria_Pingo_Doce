@@ -2,45 +2,56 @@ import streamlit as st
 import google.generativeai as genai
 import pandas as pd
 
-# 1. Configuração da Página
+# 1. Configuração da Página e Meta-Tags para Mobile
 st.set_page_config(
     page_title="A Maria do Pingo Doce", 
     page_icon="🍷",
     layout="centered"
 )
 
-# Estilo Adaptativo (Light/Dark Mode Automático)
+# Força o navegador a aceitar modos claro/escuro e adapta o visual
 st.markdown("""
+    <meta name="color-scheme" content="light dark">
     <style>
-    /* O Streamlit já gere o fundo, vamos apenas estilizar os componentes */
+    /* Variáveis que respeitam o tema do Streamlit */
+    :root {
+        --pingo-green: #2e7d32;
+    }
+    
+    /* Título Adaptativo */
+    h1 {
+        color: var(--pingo-green) !important;
+        font-weight: 700;
+    }
+
+    /* Quadro do Vinho (Momento 1) com transparência para se adaptar ao fundo */
     .vinho-box {
         padding: 20px;
         border-radius: 12px;
-        border-left: 6px solid #2e7d32;
+        border-left: 6px solid var(--pingo-green);
+        background-color: rgba(128, 128, 128, 0.1);
         margin-bottom: 25px;
-        /* Esta cor adapta-se ligeiramente por ser semi-transparente */
-        background-color: rgba(46, 125, 50, 0.1);
+        line-height: 1.6;
     }
-    h1 {
-        color: #2e7d32;
-    }
-    /* Ajuste para inputs no telemóvel */
-    .stTextInput > div > div > input {
-        border-radius: 10px;
+
+    /* Ajuste para inputs no telemóvel para não dar zoom indesejado */
+    input {
+        font-size: 16px !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
 st.title("🍳 A Maria do Pingo Doce")
-st.markdown("##### O seu guia de vinhos e receitas adaptativo.")
+st.markdown("##### O seu guia de vinhos e receitas que se adapta ao seu olhar.")
 
 # 2. Configuração da API Key
 api_key = st.secrets.get("GEMINI_API_KEY", "").strip()
 if api_key:
     genai.configure(api_key=api_key)
+    # Modelo Gemini 2.5 Flash conforme solicitado
     model = genai.GenerativeModel('models/gemini-2.5-flash')
 
-# 3. Carregamento da Tabela
+# 3. Carregamento da Tabela CSV
 @st.cache_data
 def load_data():
     try:
@@ -68,7 +79,7 @@ if vinho_input and vinho_input.strip():
         if not busca.empty:
             resultado_interno = busca.iloc[0]
 
-    # --- MOMENTO 1: INFORMAÇÃO IMEDIATA ---
+    # --- MOMENTO 1: INFORMAÇÃO IMEDIATA (PRODUTOR E HARMONIZAÇÃO) ---
     st.markdown("### 🍷 Momento 1: O Sommelier")
     
     if resultado_interno is not None:
@@ -87,33 +98,41 @@ if vinho_input and vinho_input.strip():
         info_ia = f"Vinho: {nome_vinho} ({produtor}). Prato: {prato_sugerido}."
         nome_final_prato = prato_sugerido
     else:
-        st.info("A analisar o perfil do seu vinho...")
-        info_ia = vinho_input
-        nome_final_prato = f"uma receita para acompanhar {vinho_input}"
+        # Caso o vinho não esteja na tabela, a IA gera o Momento 1 rapidamente
+        with st.spinner('A Maria está a analisar o vinho...'):
+            try:
+                prompt_m1 = f"Diz apenas o produtor/região e uma harmonização curta (prato) para o vinho: {vinho_input}. Responde em PT-PT."
+                res_m1 = model.generate_content(prompt_m1)
+                st.markdown(f'<div class="vinho-box">{res_m1.text}</div>', unsafe_allow_html=True)
+                info_ia = vinho_input
+                nome_final_prato = "uma receita ideal"
+            except:
+                st.error("Não consegui analisar este vinho.")
+                st.stop()
 
-    # --- MOMENTO 2: GERAÇÃO DA RECEITA ---
+    # --- MOMENTO 2: GERAÇÃO DA RECEITA (STREAMING) ---
     st.markdown("---")
-    with st.spinner('A Maria está a escrever a receita...'):
-        prompt = f"""
+    # O streaming permite que o telemóvel comece a mostrar texto logo, sem esperas longas
+    with st.spinner('A Maria está a escrever a receita detalhada...'):
+        prompt_receita = f"""
         És a Maria, cozinheira portuguesa. O utilizador já viu o produtor e a harmonização.
-        Apresenta APENAS a receita detalhada para: {nome_final_prato}.
-        Vinho: {info_ia}.
+        A tua tarefa é apresentar APENAS a receita completa e detalhada para: {nome_final_prato}.
+        Vinho de referência: {info_ia}.
 
-        Estrutura:
+        Estrutura a resposta assim:
         # **Título da Receita**
-        ### 🛒 **Ingredientes**
-        ### 👨‍🍳 **Modo de Preparação**
-        ### 💡 **Dica da Maria**
+        ### 🛒 **Ingredientes** (Quantidades para 2-4 pessoas)
+        ### 👨‍🍳 **Modo de Preparação** (Passo-a-passo numerado)
+        ### 💡 **Dica da Maria** (O segredo do Chef)
 
-        Usa PT-PT. Responde com clareza.
+        Usa Português de Portugal. Foca-te 100% na culinária e na clareza.
         """
 
         try:
-            # Usar streaming para uma sensação de rapidez no telemóvel
-            response = model.generate_content(prompt, stream=True)
+            response = model.generate_content(prompt_receita, stream=True)
             st.write_stream(response)
         except Exception as e:
-            st.error(f"Erro na receita: {e}")
+            st.error(f"Erro ao gerar a receita: {e}")
 
 st.markdown("---")
-st.caption("Maria - Inteligência Adaptativa | 2026")
+st.caption("Maria - Sommelier & Chef | Versão 2.5 Flash | Modo Adaptativo Ativo")
