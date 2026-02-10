@@ -9,7 +9,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# Estilo Visual
+# Estilo Visual focado na clareza e no Pingo Doce
 st.markdown("""
     <style>
     .stApp {background-color: #fdfdfd;}
@@ -17,10 +17,11 @@ st.markdown("""
     .stTextInput > div > div > input {border-radius: 10px; border: 2px solid #2e7d32;}
     .vinho-info {
         background-color: #e8f5e9;
-        padding: 15px;
-        border-radius: 10px;
-        border-left: 5px solid #2e7d32;
-        margin-bottom: 20px;
+        padding: 20px;
+        border-radius: 12px;
+        border-left: 6px solid #2e7d32;
+        margin-bottom: 25px;
+        line-height: 1.6;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -65,47 +66,53 @@ if vinho_input and vinho_input.strip():
         if not busca.empty:
             resultado_interno = busca.iloc[0]
 
-    # --- PASSO 1: Apresentar info do vinho IMEDIATAMENTE ---
-    st.markdown("### 🍷 Nota da Maria sobre o Vinho")
-    with st.container():
-        if resultado_interno is not None:
-            st.markdown(f"""
-            <div class="vinho-info">
-                <strong>Vinho:</strong> {resultado_interno['Nome do Vinho']}<br>
-                <strong>Perfil:</strong> {resultado_interno['Descrição']}<br>
-                <strong>Região/Produtor:</strong> {resultado_interno['Região / Produtor']}<br>
-                <strong>Preço aprox.:</strong> {resultado_interno['Preço (aprox.)']}
-            </div>
-            """, unsafe_allow_html=True)
-            nome_prato = resultado_interno['Receita Pingo Doce Sugerida']
-            info_vinho_prompt = f"{resultado_interno['Nome do Vinho']} ({resultado_interno['Região / Produtor']})"
-        else:
-            st.info(f"Vou procurar a melhor harmonização para o seu **{vinho_input}**...")
-            nome_prato = f"um prato típico que combine com {vinho_input}"
-            info_vinho_prompt = vinho_input
+    # --- PASSO 1: Informação Imediata (Vinho, Produtor e Harmonização) ---
+    st.markdown("### 🍷 Informações da Cave")
+    
+    if resultado_interno is not None:
+        nome_prato = resultado_interno['Receita Pingo Doce Sugerida']
+        vinho_nome = resultado_interno['Nome do Vinho']
+        produtor = resultado_interno['Região / Produtor']
+        descricao = resultado_interno['Descrição']
+        
+        # O quadro verde aparece AGORA com tudo o que não é a receita
+        st.markdown(f"""
+        <div class="vinho-info">
+            <strong>🍷 Vinho:</strong> {vinho_nome}<br>
+            <strong>🏷️ Produtor/Região:</strong> {produtor}<br>
+            <strong>📝 Perfil:</strong> {descricao}<br>
+            <strong>🤝 Harmonização:</strong> Este vinho combina perfeitamente com <strong>{nome_prato}</strong> devido à sua estrutura e perfil aromático.
+        </div>
+        """, unsafe_allow_html=True)
+        
+        info_para_ia = f"Vinho: {vinho_nome} ({produtor}). Prato: {nome_prato}."
+    else:
+        st.info(f"Vou analisar o perfil do **{vinho_input}** e criar uma receita personalizada...")
+        nome_prato = f"um prato ideal para acompanhar {vinho_input}"
+        info_para_ia = vinho_input
 
-    # --- PASSO 2: Pensar e apresentar a Receita ---
-    with st.spinner('A escrever a receita detalhada para si...'):
+    # --- PASSO 2: Spinner e Geração da Receita Detalhada ---
+    with st.spinner('A Maria está a organizar os ingredientes e o fogão...'):
         prompt_receita = f"""
-        És a Maria, cozinheira portuguesa. O utilizador tem este vinho: {info_vinho_prompt}.
-        Apresenta a receita detalhada para: {nome_prato}.
+        És a Maria, uma cozinheira portuguesa experiente. 
+        O utilizador já sabe os detalhes do vinho: {info_para_ia}.
+        
+        A tua tarefa agora é APENAS apresentar a receita detalhada para: {nome_prato}.
 
         Estrutura:
         1. # **Título da Receita**
-        2. ### 🛒 **Ingredientes** (Para 2-4 pessoas)
-        3. ### 👨‍🍳 **Modo de Preparação** (Passo-a-passo)
-        4. ### 💡 **Dica da Maria** (Segredo de chef)
-        5. ### 🍷 **Harmonização** (Curta explicação técnica)
-        6. ### 🏷️ **Sobre o Produtor** (Curiosidade curta)
+        2. ### 🛒 **Ingredientes** (Quantidades para 2-4 pessoas)
+        3. ### 👨‍🍳 **Modo de Preparação** (Passo-a-passo detalhado)
+        4. ### 💡 **Dica da Maria** (O segredo para o prato brilhar)
 
-        Usa Português de Portugal. Foca na receita.
+        Usa Português de Portugal. Sê muito detalhada na parte culinária. 
+        Não repitas as informações do produtor ou da harmonização que já foram ditas.
         """
 
         try:
             response = model.generate_content(prompt_receita)
             st.markdown("---")
             st.markdown(response.text)
-            # Sem balões aqui
             
         except Exception as e:
             st.error(f"Erro ao gerar a receita: {e}")
