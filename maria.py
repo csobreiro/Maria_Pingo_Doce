@@ -4,7 +4,7 @@ import pandas as pd
 
 # 1. Configuração da Página
 st.set_page_config(
-    page_title="Maria - Receitas & Vinhos", 
+    page_title="A Maria do Pingo Doce - Receitas & Vinhos", 
     page_icon="🍳",
     layout="centered"
 )
@@ -57,7 +57,7 @@ vinho_input = st.text_input(
 )
 
 if vinho_input and vinho_input.strip():
-    with st.spinner('A Maria está a escrever a receita...'):
+    with st.spinner('A Maria está a escolher a sua receita...'):
         resultado_interno = None
         
         if df_vinhos is not None:
@@ -85,6 +85,7 @@ if vinho_input and vinho_input.strip():
         3. **Modo de Preparação**: Passo-a-passo claro e numerado.
         4. **Dica da Maria**: Um segredo de cozinha para o prato ficar perfeito.
         5. **Harmonização**: Uma frase curta (máximo 15 palavras) sobre o porquê de combinar com o vinho.
+        5. **Produtor**: Uma frase curta (máximo 15 palavras) sobre o produtor do vinho.
 
         Usa Português de Portugal. Foca-te na culinária, não te alongues sobre o vinho.
         """
