@@ -18,7 +18,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🍳 Maria - O seu Livro de Receitas")
+st.title("🍳 A Maria do Pingo Doce - O seu Livro de Receitas")
 st.markdown("##### Escolha o seu vinho e eu preparo a receita detalhada para o seu almoço ou jantar.")
 
 # 2. Configuração da API Key
