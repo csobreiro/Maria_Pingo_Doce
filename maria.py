@@ -25,7 +25,7 @@ if not api_key:
 
 genai.configure(api_key=api_key)
 # Usando a versão estável mais recente
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('models/gemini-2.5-flash')
 
 # 3. Carregar a Base de Dados (Tabela Vinho)
 @st.cache_data
