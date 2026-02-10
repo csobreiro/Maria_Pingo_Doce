@@ -1,68 +1,74 @@
 import streamlit as st
 import google.generativeai as genai
-import os
 
-# Configuração da Página
-st.set_page_config(page_title="Maria - Sommelier Pessoal", page_icon="🍷")
+# 1. Configuração Visual da Página
+st.set_page_config(
+    page_title="Maria - Especialista Pingo Doce", 
+    page_icon="🍷",
+    layout="centered"
+)
 
-# Estilo Personalizado (Opcional - para ficar mais elegante)
+# Estilo para as cores remeterem um pouco ao tema (opcional)
 st.markdown("""
     <style>
-    .main {
-        background-color: #fdfaf7;
+    .stApp {
+        background-color: #f9fdf9;
     }
-    stTextInput > div > div > input {
-        border-radius: 10px;
+    .stButton>button {
+        background-color: #2e7d32;
+        color: white;
+        border-radius: 20px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# Título e Introdução
-st.title("Olá, eu sou a Maria! 👋")
-st.subheader("Diga-me que vinho vai abrir e eu trato da receita.")
+# 2. Título e Saudação
+st.title("🌿 Maria - Especialista em Vinhos")
+st.markdown("### Olá! Diga-me que vinho tem em casa e eu sugiro a receita ideal.")
 
-# --- Configuração da API Key ---
-# No Streamlit Cloud, adicione em Settings -> Secrets: GEMINI_API_KEY = "sua_chave"
+# 3. Configuração da API (Lida a partir dos Secrets do Streamlit)
 api_key = st.secrets.get("GEMINI_API_KEY")
 
 if api_key:
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-1.5-flash')
 
-    # --- Interface de Pesquisa ---
-    with st.container():
-        vinho = st.text_input(
-            "Pesquise pelo nome do vinho, região ou tipo:",
-            placeholder="Ex: Papa Figos Tinto, Alvarinho de Monção, ou um Rosé fresco..."
-        )
+    # 4. Interface de Pesquisa (Caixa de Texto)
+    vinho = st.text_input(
+        "Qual é o vinho ou região?", 
+        placeholder="Ex: Grão Vasco, Herdade do Esporão, ou um Vinho Verde..."
+    )
 
     if vinho:
-        with st.spinner('A Maria está a consultar a cave e o livro de receitas...'):
-            # Prompt otimizado para a Maria
-            prompt = f"""
-            És a Maria, uma assistente pessoal portuguesa, expert em vinhos e gastronomia.
+        with st.spinner('A Maria está a pensar na melhor combinação...'):
+            # O PROMPT que pediste está inserido aqui abaixo:
+            prompt_da_maria = f"""
+            És a Maria, uma assistente pessoal inspirada na frescura do Pingo Doce.
             O utilizador tem este vinho: {vinho}.
-            
-            1. Descreve o vinho de forma curta e charmosa (ex: "Esse Douro é encorpado e elegante").
-            2. Sugere uma receita ideal (foca-te em pratos portugueses ou mediterrânicos).
-            3. Dá uma dica de mestre (ex: temperatura de serviço ou um ingrediente secreto na receita).
-            
-            Usa um tom simpático, prestável e português de Portugal. 
-            Formata com negritos e bullet points.
+
+            1. Identifica o vinho e sugere uma receita com ingredientes que se encontram facilmente na zona dos frescos.
+            2. Dá preferência a pratos de conforto portugueses.
+            3. Explica por que razão o vinho combina com essa comida (fala de acidez, taninos ou corpo).
+            4. Termina com um conselho prático sobre como escolher os melhores ingredientes para essa receita.
+
+            Usa um tom prestável, como se estivesses a ajudar um cliente no corredor do vinho.
+            Responde em Português de Portugal e usa negritos para destacar os nomes dos pratos.
             """
             
             try:
-                response = model.generate_content(prompt)
+                # Gerar resposta da IA
+                response = model.generate_content(prompt_da_maria)
+                
+                # Exibir Resultado
                 st.markdown("---")
                 st.markdown(response.text)
+                st.balloons() # Um pequeno efeito visual de sucesso
                 
-                # Botão extra de cortesia
-                st.balloons()
             except Exception as e:
-                st.error("Ops! Tive um problema ao aceder à minha base de dados. Verifique a API Key.")
+                st.error("A Maria teve um pequeno precalço a consultar o livro de receitas. Tente novamente!")
 else:
-    st.error("Erro: Não encontrei a chave da API (GEMINI_API_KEY) nos Secrets do Streamlit.")
+    st.warning("⚠️ Atenção: A chave da API não foi configurada. Vá às definições do Streamlit e adicione GEMINI_API_KEY nos Secrets.")
 
 # Rodapé
 st.markdown("---")
-st.caption("A Maria recomenda sempre consumo moderado. Saúde! 🍷")
+st.caption("Maria - Assistente de Harmonização | Repositório: Maria_Pingo_Doce")
